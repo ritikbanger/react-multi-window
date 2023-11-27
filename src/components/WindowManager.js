@@ -9,47 +9,31 @@ class WindowManager {
   constructor() {
     let that = this;
 
-    // event listener for when current window is about to ble closed
+    // event listener for when localStorage is changed from another window
+    window.addEventListener("storage", (event) => {
+      if (event.key === "windows") {
+        let newWindows = JSON.parse(event.newValue);
+        let winChange = that.#didWindowsChange(that.#windows, newWindows);
+
+        that.#windows = newWindows;
+
+        if (winChange) {
+          if (that.#winChangeCallback) that.#winChangeCallback();
+        }
+      }
+    });
+
+    // event listener for when the current window is about to be closed
     window.addEventListener("beforeunload", function (e) {
       let index = that.getWindowIndexFromId(that.#id);
 
-      //remove this window from the list and update local storage
+      // remove this window from the list and update local storage
       that.#windows.splice(index, 1);
       that.updateWindowsLocalStorage();
     });
   }
 
-  componentDidMount() {
-    const handleStorageChange = (event) => {
-      if (event.key === "windows") {
-        const newWindows = JSON.parse(event.newValue);
-        const winChange = this.#didWindowsChange(this.#windows, newWindows);
-
-        this.windows = newWindows;
-
-        if (winChange && this.#winChangeCallback) this.#winChangeCallback();
-      }
-    };
-
-    const handleBeforeUnload = () => {
-      const index = this.getWindowIndexFromId(this.id);
-
-      // remove this window from the list and update local storage
-      this.windows.splice(index, 1);
-      this.updateWindowsLocalStorage();
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("beforeunload", handleBeforeUnload);
-  }
-
-  componentWillUnmount() {
-    // Cleanup: remove event listeners when the component unmounts
-    window.removeEventListener("storage", this.handleStorageChange);
-    window.removeEventListener("beforeunload", this.handleBeforeUnload);
-  }
-
-  // check if theres any changes to the window list
+  // check if there are any changes to the window list
   #didWindowsChange(pWins, nWins) {
     if (pWins.length !== nWins.length) {
       return true;
@@ -64,7 +48,7 @@ class WindowManager {
     }
   }
 
-  // initiate current window (add metadata for custom data to store with each window instance)
+  // initiate the current window (add metadata for custom data to store with each window instance)
   init(metaData) {
     this.#windows = JSON.parse(localStorage.getItem("windows")) || [];
     this.#count = localStorage.getItem("count") || 0;
@@ -104,10 +88,7 @@ class WindowManager {
   }
 
   update() {
-    //console.log(step);
     let winShape = this.getWinShape();
-
-    //console.log(winShape.x, winShape.y);
 
     if (
       winShape.x !== this.#winData.shape.x ||
@@ -120,7 +101,6 @@ class WindowManager {
       let index = this.getWindowIndexFromId(this.#id);
       this.#windows[index].shape = winShape;
 
-      //console.log(windows);
       if (this.#winShapeChangeCallback) this.#winShapeChangeCallback();
       this.updateWindowsLocalStorage();
     }
